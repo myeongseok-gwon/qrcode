@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95rem;
+        }
+
+        input[type="url"], input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input[type="url"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .qr-result {
+            margin-top: 30px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .qr-result.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #qrcode {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .qr-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .qr-url {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            color: #666;
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+
+        .qr-display-text {
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QR Code Generator</h1>
+        
+        <div class="input-group">
+            <label for="url">URL</label>
+            <input type="url" id="url" placeholder="https://example.com" required>
+        </div>
+
+        <div class="input-group">
+            <label for="displayText">표시 텍스트 (선택사항)</label>
+            <input type="text" id="displayText" placeholder="QR 코드 아래에 표시될 텍스트를 입력하세요">
+        </div>
+
+        <button class="generate-btn" onclick="generateQR()">QR 코드 생성</button>
+
+        <div class="qr-result" id="qrResult">
+            <div id="qrcode"></div>
+            <div class="qr-info">
+                <div class="qr-url" id="displayUrl"></div>
+                <div class="qr-display-text" id="displayTextShow"></div>
+            </div>
+            <button class="download-btn" onclick="downloadQR()">PNG로 다운로드</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script>
+        let currentQRCode = null;
+
+        function generateQR() {
+            const url = document.getElementById('url').value.trim();
+            const displayText = document.getElementById('displayText').value.trim();
+            
+            if (!url) {
+                alert('URL을 입력해주세요.');
+                return;
+            }
+
+            // URL 유효성 검사
+            try {
+                new URL(url);
+            } catch (e) {
+                alert('유효한 URL을 입력해주세요.');
+                return;
+            }
+
+            // 기존 QR 코드 제거
+            const qrcodeDiv = document.getElementById('qrcode');
+            qrcodeDiv.innerHTML = '';
+
+            // QR 코드 생성
+            try {
+                const canvas = document.createElement('canvas');
+                const qr = new QRious({
+                    element: canvas,
+                    value: url,
+                    size: 256,
+                    foreground: '#000000',
+                    background: '#ffffff',
+                    level: 'H'
+                });
+
+                qrcodeDiv.appendChild(canvas);
+                currentQRCode = canvas;
+                
+                // 결과 표시
+                document.getElementById('displayUrl').textContent = url;
+                document.getElementById('displayTextShow').textContent = displayText || '';
+                
+                const qrResult = document.getElementById('qrResult');
+                qrResult.classList.add('show');
+            } catch (error) {
+                console.error(error);
+                alert('QR 코드 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        function downloadQR() {
+            if (!currentQRCode) {
+                alert('먼저 QR 코드를 생성해주세요.');
+                return;
+            }
+
+            const displayText = document.getElementById('displayText').value.trim();
+            
+            // 새로운 캔버스 생성 (QR 코드 + 텍스트)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const qrSize = 256;
+            const padding = 40;
+            const textHeight = displayText ? 60 : 0;
+            
+            canvas.width = qrSize + (padding * 2);
+            canvas.height = qrSize + (padding * 2) + textHeight;
+            
+            // 배경색 설정 (흰색)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // QR 코드 그리기
+            ctx.drawImage(currentQRCode, padding, padding);
+            
+            // 텍스트가 있으면 그리기
+            if (displayText) {
+                ctx.fillStyle = '#333333';
+                ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const textY = qrSize + padding + (textHeight / 2);
+                ctx.fillText(displayText, canvas.width / 2, textY);
+            }
+            
+            // 다운로드
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // Enter 키로 QR 코드 생성
+        document.getElementById('url').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateQR();
+            }
+        });
+
+        document.getElementById('displayText').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateQR();
+            }
+        });
+    </script>
+</body>
+</html>
